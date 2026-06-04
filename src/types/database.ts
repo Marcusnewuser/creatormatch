@@ -25,6 +25,7 @@ export interface Message {
   id: string
   conversation_id: string
   sender_id: string
+  sender_role: MessageRoleContext | null
   message: string | null
   file_url: string | null
   file_name: string | null

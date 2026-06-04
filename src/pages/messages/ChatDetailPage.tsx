@@ -26,8 +26,8 @@ import {
   applicationStatusLabel,
 } from '../../lib/api'
 import { requireSupabase } from '../../lib/supabase'
-import type { ApplicationWithCreator, Message } from '../../types/database'
-import type { Submission } from '../../types/database'
+import { isOutgoingChatMessage } from '../../lib/chat-message-utils'
+import type { ApplicationWithCreator, Conversation, Message, Submission } from '../../types/database'
 
 export default function ChatDetailPage() {
   const { conversationId } = useParams()
@@ -40,6 +40,7 @@ export default function ChatDetailPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const [conversation, setConversation] = useState<Conversation | null>(null)
   const [application, setApplication] = useState<ApplicationWithCreator | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [submissions, setSubmissions] = useState<Submission[]>([])
@@ -88,6 +89,7 @@ export default function ChatDetailPage() {
             .maybeSingle(),
     ])
 
+    setConversation(conv)
     setApplication(app)
     setMessages(msgs)
     setSubmissions(subs)
@@ -129,13 +131,17 @@ export default function ChatDetailPage() {
         if (prev.some((m) => m.id === msg.id)) return prev
         return [...prev, msg]
       })
-      if (user && msg.sender_id !== user.id) {
+      if (
+        user &&
+        conversation &&
+        !isOutgoingChatMessage(msg, messageRole, conversation.creator_id, conversation.brand_id)
+      ) {
         markConversationRead(conversationId, user.id).catch(() => undefined)
       }
       setTimeout(scrollToBottom, 50)
     })
     return unsubscribe
-  }, [conversationId, user, scrollToBottom])
+  }, [conversationId, user, conversation, messageRole, scrollToBottom])
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault()
@@ -145,6 +151,7 @@ export default function ChatDetailPage() {
       const msg = await sendMessage({
         conversationId,
         senderId: user.id,
+        senderRole: messageRole,
         message: text.trim(),
       })
       setMessages((prev) => [...prev, msg])
@@ -169,6 +176,7 @@ export default function ChatDetailPage() {
       const msg = await sendMessage({
         conversationId,
         senderId: user.id,
+        senderRole: messageRole,
         fileUrl: url,
         fileName: file.name,
         message: `Shared file: ${file.name}`,
@@ -202,8 +210,12 @@ export default function ChatDetailPage() {
 
   const status = application.status
 
+  if (!conversation) {
+    return <div className="px-4 pt-6 text-text-secondary">{error ?? 'Not found'}</div>
+  }
+
   return (
-    <div className="flex flex-col min-h-[calc(100dvh-4rem)] max-w-lg mx-auto">
+    <div className="flex flex-col min-h-[calc(100dvh-4rem)] max-w-lg mx-auto w-full">
       <div className="px-4 pt-4 shrink-0">
         <PageHeader
           title={otherName}
@@ -288,7 +300,9 @@ export default function ChatDetailPage() {
 
       <ChatMessageList
         messages={messages}
-        currentUserId={user?.id}
+        viewerRole={messageRole}
+        creatorId={conversation.creator_id}
+        brandId={conversation.brand_id}
         scrollAnchorRef={messagesEndRef}
       />
 

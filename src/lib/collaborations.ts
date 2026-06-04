@@ -229,6 +229,7 @@ export async function fetchMessages(conversationId: string): Promise<Message[]> 
 export async function sendMessage(input: {
   conversationId: string
   senderId: string
+  senderRole: MessageRoleContext
   message?: string
   fileUrl?: string
   fileName?: string
@@ -238,19 +239,24 @@ export async function sendMessage(input: {
     throw new Error('Message or file is required')
   }
 
-  const { data, error } = await requireSupabase()
-    .from('messages')
-    .insert({
-      conversation_id: input.conversationId,
-      sender_id: input.senderId,
-      message: text || null,
-      file_url: input.fileUrl ?? null,
-      file_name: input.fileName ?? null,
-    })
-    .select()
-    .single()
-  if (error) throw error
-  return data
+  const payload = {
+    conversation_id: input.conversationId,
+    sender_id: input.senderId,
+    sender_role: input.senderRole,
+    message: text || null,
+    file_url: input.fileUrl ?? null,
+    file_name: input.fileName ?? null,
+  }
+
+  let result = await requireSupabase().from('messages').insert(payload).select().single()
+
+  if (result.error && /sender_role/i.test(result.error.message)) {
+    const { sender_role: _role, ...legacyPayload } = payload
+    result = await requireSupabase().from('messages').insert(legacyPayload).select().single()
+  }
+
+  if (result.error) throw result.error
+  return { ...result.data, sender_role: result.data.sender_role ?? input.senderRole }
 }
 
 export async function markConversationRead(conversationId: string, userId: string): Promise<void> {

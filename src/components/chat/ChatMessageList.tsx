@@ -1,18 +1,23 @@
 import { useRef, useEffect } from 'react'
 import { ChatMessageBubble } from './ChatMessageBubble'
 import { formatRelativeTime } from '../../lib/constants'
+import { isOutgoingChatMessage } from '../../lib/chat-message-utils'
 import { cn } from '../../lib/utils'
-import type { Message } from '../../types/database'
+import type { Message, MessageRoleContext } from '../../types/database'
 
 interface ChatMessageListProps {
   messages: Message[]
-  currentUserId: string | undefined
+  viewerRole: MessageRoleContext
+  creatorId: string
+  brandId: string
   scrollAnchorRef?: React.RefObject<HTMLDivElement | null>
 }
 
 export function ChatMessageList({
   messages,
-  currentUserId,
+  viewerRole,
+  creatorId,
+  brandId,
   scrollAnchorRef,
 }: ChatMessageListProps) {
   const endRef = useRef<HTMLDivElement>(null)
@@ -23,25 +28,27 @@ export function ChatMessageList({
   }, [messages.length, anchorRef])
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-3 min-h-[200px]">
-      <div className="flex flex-col w-full">
+    <div
+      className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-3 min-h-[200px] bg-gray-50/40"
+      role="log"
+      aria-label="Chat messages"
+    >
+      <div className="w-full max-w-full">
         {messages.map((msg, index) => {
-          const isOwn = Boolean(currentUserId && msg.sender_id === currentUserId)
-          const groupedWithPrev = messages[index - 1]?.sender_id === msg.sender_id
+          const isOwn = isOutgoingChatMessage(msg, viewerRole, creatorId, brandId)
+          const groupedWithPrev =
+            index > 0 &&
+            isOutgoingChatMessage(messages[index - 1], viewerRole, creatorId, brandId) === isOwn
 
           return (
             <div
               key={msg.id}
-              className={cn(
-                'flex w-full',
-                isOwn ? 'justify-end' : 'justify-start',
-                groupedWithPrev ? 'mt-1' : index === 0 ? '' : 'mt-4',
-              )}
+              className={cn('w-full max-w-full', groupedWithPrev ? 'mt-1.5' : index === 0 ? '' : 'mt-4')}
             >
               <div
                 className={cn(
-                  'flex flex-col min-w-0 max-w-[80%] md:max-w-[65%]',
-                  isOwn ? 'items-end' : 'items-start',
+                  'w-fit max-w-[80%] md:max-w-[65%]',
+                  isOwn ? 'ml-auto mr-0' : 'mr-auto ml-0',
                 )}
               >
                 <ChatMessageBubble
@@ -50,15 +57,14 @@ export function ChatMessageList({
                   fileName={msg.file_name}
                   isOwn={isOwn}
                 />
-                <time
-                  dateTime={msg.created_at}
+                <p
                   className={cn(
-                    'mt-1 px-1 text-[11px] leading-none text-text-secondary',
-                    isOwn ? 'text-right self-end' : 'text-left self-start',
+                    'mt-1 px-0.5 text-[11px] leading-none text-text-secondary',
+                    isOwn ? 'text-right' : 'text-left',
                   )}
                 >
-                  {formatRelativeTime(msg.created_at)}
-                </time>
+                  <time dateTime={msg.created_at}>{formatRelativeTime(msg.created_at)}</time>
+                </p>
               </div>
             </div>
           )

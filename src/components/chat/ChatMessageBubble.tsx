@@ -23,10 +23,10 @@ export function ChatMessageBubble({
   return (
     <div
       className={cn(
-        'rounded-[18px] px-3.5 py-2.5 shadow-sm',
+        'w-full rounded-[18px] px-3.5 py-2.5 shadow-sm',
         isOwn
-          ? 'bg-brand-primary text-white'
-          : 'border border-border bg-white text-text-primary',
+          ? 'bg-[#2563eb] text-white'
+          : 'border border-[#e5e7eb] bg-white text-[#111827]',
       )}
     >
       {hasFile && fileUrl && fileName && (
