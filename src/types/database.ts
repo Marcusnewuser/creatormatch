@@ -7,7 +7,45 @@ export type ApplicationStatus =
   | 'rejected'
   | 'in_progress'
   | 'pending_completion'
+  | 'content_submitted'
+  | 'approved'
   | 'completed'
+
+export interface Conversation {
+  id: string
+  application_id: string
+  creator_id: string
+  brand_id: string
+  created_at: string
+}
+
+export interface Message {
+  id: string
+  conversation_id: string
+  sender_id: string
+  message: string | null
+  file_url: string | null
+  file_name: string | null
+  created_at: string
+}
+
+export interface ConversationWithDetails extends Conversation {
+  application?: Application
+  campaign_title: string
+  other_party_name: string
+  other_party_avatar: string | null
+  last_message: Message | null
+  unread_count: number
+}
+
+export interface Submission {
+  id: string
+  application_id: string
+  creator_id: string
+  content_url: string
+  notes: string | null
+  created_at: string
+}
 
 export interface Profile {
   id: string
@@ -211,6 +249,21 @@ export interface Database {
         Row: Notification
         Insert: Omit<Notification, 'id' | 'created_at' | 'is_read'> & { is_read?: boolean }
         Update: Partial<Pick<Notification, 'is_read'>>
+      }
+      conversations: {
+        Row: Conversation
+        Insert: Omit<Conversation, 'id' | 'created_at'>
+        Update: never
+      }
+      messages: {
+        Row: Message
+        Insert: Omit<Message, 'id' | 'created_at'>
+        Update: never
+      }
+      submissions: {
+        Row: Submission
+        Insert: Omit<Submission, 'id' | 'created_at'>
+        Update: never
       }
     }
   }

@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { FileText, MessageCircle } from 'lucide-react'
 import { PageHeader } from '../../components/layout/PageHeader'
 import { Card } from '../../components/ui/Card'
 import { Badge } from '../../components/ui/Badge'
@@ -6,14 +8,14 @@ import { Button } from '../../components/ui/Button'
 import { CampaignBudget } from '../../components/CampaignBudget'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { LoadingState } from '../../components/ui/LoadingState'
-import { CheckCheck, FileText, MessageSquareWarning } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import {
   applicationStatusBadgeVariant,
   applicationStatusLabel,
-  confirmCollaborationComplete,
+  canAccessCollaborationChat,
+  completeCollaboration,
+  fetchConversationByApplication,
   fetchCreatorApplications,
-  requestCollaborationReview,
   withdrawApplication,
 } from '../../lib/api'
 import { formatDate } from '../../lib/constants'
@@ -26,7 +28,8 @@ const tabs: { key: Tab; label: string }[] = [
   { key: 'pending', label: 'Pending' },
   { key: 'accepted', label: 'Accepted' },
   { key: 'in_progress', label: 'In Progress' },
-  { key: 'pending_completion', label: 'Action Required' },
+  { key: 'content_submitted', label: 'Submitted' },
+  { key: 'approved', label: 'Approved' },
   { key: 'completed', label: 'Completed' },
   { key: 'rejected', label: 'Rejected' },
 ]
@@ -36,6 +39,7 @@ export default function MyApplications() {
   const [activeTab, setActiveTab] = useState<Tab>('pending')
   const [applications, setApplications] = useState<ApplicationWithCampaign[]>([])
   const [loading, setLoading] = useState(true)
+  const [chatLinks, setChatLinks] = useState<Record<string, string>>({})
   const [actionId, setActionId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -56,6 +60,22 @@ export default function MyApplications() {
     loadApplications()
   }, [user])
 
+  useEffect(() => {
+    const active = applications.filter((a) => canAccessCollaborationChat(a.status))
+    Promise.all(
+      active.map(async (a) => {
+        const conv = await fetchConversationByApplication(a.id)
+        return conv ? ([a.id, conv.id] as const) : null
+      }),
+    ).then((pairs) => {
+      const map: Record<string, string> = {}
+      for (const p of pairs) {
+        if (p) map[p[0]] = p[1]
+      }
+      setChatLinks(map)
+    })
+  }, [applications])
+
   async function handleWithdraw(id: string, campaignTitle: string) {
     if (!window.confirm(`Withdraw your application to "${campaignTitle}"?`)) return
     setActionId(id)
@@ -69,26 +89,14 @@ export default function MyApplications() {
     }
   }
 
-  async function handleConfirmCompletion(id: string) {
+  async function handleComplete(id: string) {
     setActionId(id)
     try {
-      const updated = await confirmCollaborationComplete(id)
+      const updated = await completeCollaboration(id)
       setApplications((prev) => prev.map((a) => (a.id === id ? { ...a, ...updated } : a)))
       setActiveTab('completed')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to confirm completion')
-    } finally {
-      setActionId(null)
-    }
-  }
-
-  async function handleRequestReview(id: string) {
-    setActionId(id)
-    try {
-      const updated = await requestCollaborationReview(id)
-      setApplications((prev) => prev.map((a) => (a.id === id ? { ...a, ...updated } : a)))
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to request review')
+      setError(err instanceof Error ? err.message : 'Failed to complete')
     } finally {
       setActionId(null)
     }
@@ -182,40 +190,31 @@ export default function MyApplications() {
                 </Button>
               )}
 
-              {app.status === 'pending_completion' && (
-                <div className="mt-4 space-y-3">
-                  <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                    The brand marked this collaboration as completed. Confirm when you&apos;re satisfied
-                    with the deliverables.
-                  </div>
-                  {app.review_requested_at && (
-                    <p className="text-xs text-text-secondary flex items-center gap-1.5">
-                      <MessageSquareWarning className="h-3.5 w-3.5" />
-                      Review requested {formatDate(app.review_requested_at)}
-                    </p>
-                  )}
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <Button
-                      fullWidth
-                      size="sm"
-                      loading={actionId === app.id}
-                      onClick={() => handleConfirmCompletion(app.id)}
-                    >
-                      <CheckCheck className="h-4 w-4" />
-                      Confirm Completion
-                    </Button>
-                    <Button
-                      fullWidth
-                      variant="outline"
-                      size="sm"
-                      loading={actionId === app.id}
-                      disabled={Boolean(app.review_requested_at)}
-                      onClick={() => handleRequestReview(app.id)}
-                    >
-                      Request Review
-                    </Button>
-                  </div>
-                </div>
+              {chatLinks[app.id] && (
+                <Link to={`/creator/messages/${chatLinks[app.id]}`} className="block mt-3">
+                  <Button variant="outline" size="sm" fullWidth>
+                    <MessageCircle className="h-4 w-4" />
+                    Open Chat
+                  </Button>
+                </Link>
+              )}
+
+              {app.status === 'approved' && (
+                <Button
+                  className="mt-3"
+                  size="sm"
+                  fullWidth
+                  loading={actionId === app.id}
+                  onClick={() => handleComplete(app.id)}
+                >
+                  Mark Collaboration Complete
+                </Button>
+              )}
+
+              {app.status === 'in_progress' && (
+                <p className="mt-3 text-xs text-text-secondary">
+                  Submit content from the collaboration chat.
+                </p>
               )}
 
               {app.status === 'completed' && app.completed_at && (

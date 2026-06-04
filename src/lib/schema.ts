@@ -56,6 +56,17 @@ export async function hasPortfolioColumns(): Promise<boolean> {
   return portfolioColumnsCache
 }
 
+let collaborationTablesCache: boolean | null = null
+
+/** Migration 015 — conversations */
+export async function hasCollaborationTables(): Promise<boolean> {
+  if (!isSupabaseConfigured || !supabase) return false
+  if (collaborationTablesCache !== null) return collaborationTablesCache
+
+  const { error } = await requireSupabase().from('conversations').select('id').limit(0)
+  collaborationTablesCache = !error
+  return collaborationTablesCache
+}
 /** Migration 010 — notifications */
 export async function hasNotificationsTable(): Promise<boolean> {
   if (!isSupabaseConfigured || !supabase) return false
@@ -130,6 +141,7 @@ export function resetSchemaCache() {
   brandBannerColumnCache = null
   notificationsTableCache = null
   notificationRoleContextCache = null
+  collaborationTablesCache = null
 }
 
 /** Strip brand banner when migration 009 has not been applied. */

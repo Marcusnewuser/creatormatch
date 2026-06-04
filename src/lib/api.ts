@@ -229,6 +229,37 @@ export {
 export type { ApplicationInsert } from './applications'
 
 export {
+  fetchConversationsForUser,
+  fetchConversationById,
+  fetchConversationByApplication,
+  fetchMessages,
+  sendMessage,
+  markConversationRead,
+  fetchTotalUnreadMessages,
+  fetchRecentMessagesForUser,
+  subscribeToMessages,
+  uploadCollaborationFile,
+  validateCollaborationFile,
+  approveApplicationContent,
+  completeCollaboration,
+  countActiveCollaborations,
+  COLLABORATION_FILE_MAX_BYTES,
+} from './collaborations'
+
+export {
+  fetchSubmissionsForApplication,
+  createSubmission,
+  isValidContentUrl,
+} from './submissions'
+
+export {
+  COLLABORATION_TIMELINE_STEPS,
+  getTimelineStepIndex,
+  isActiveCollaboration,
+  canAccessCollaborationChat,
+} from './collaboration-workflow'
+
+export {
   fetchCreatorPosts,
   fetchCreatorProfileWithPosts,
   fetchPostById,
@@ -280,7 +311,7 @@ export async function fetchAdminStats() {
 }
 
 export async function uploadFile(
-  bucket: 'avatars' | 'logos' | 'campaign-images' | 'portfolio',
+  bucket: 'avatars' | 'logos' | 'campaign-images' | 'portfolio' | 'collaboration-files',
   userId: string,
   file: File,
 ): Promise<string> {

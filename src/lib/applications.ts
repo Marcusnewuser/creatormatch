@@ -30,6 +30,10 @@ export function applicationStatusLabel(status: ApplicationStatus): string {
       return 'Rejected'
     case 'in_progress':
       return 'In Progress'
+    case 'content_submitted':
+      return 'Content Submitted'
+    case 'approved':
+      return 'Approved'
     case 'pending_completion':
       return 'Awaiting Confirmation'
     case 'completed':
@@ -49,6 +53,10 @@ export function applicationStatusBadgeVariant(status: ApplicationStatus): Applic
       return 'danger'
     case 'in_progress':
       return 'primary'
+    case 'content_submitted':
+      return 'warning'
+    case 'approved':
+      return 'success'
     case 'pending_completion':
       return 'warning'
     case 'completed':
@@ -62,6 +70,8 @@ export function countByStatus(items: { status: ApplicationStatus }[]) {
     accepted: items.filter((i) => i.status === 'accepted').length,
     rejected: items.filter((i) => i.status === 'rejected').length,
     in_progress: items.filter((i) => i.status === 'in_progress').length,
+    content_submitted: items.filter((i) => i.status === 'content_submitted').length,
+    approved: items.filter((i) => i.status === 'approved').length,
     pending_completion: items.filter((i) => i.status === 'pending_completion').length,
     completed: items.filter((i) => i.status === 'completed').length,
     total: items.length,
@@ -286,11 +296,13 @@ export async function markCollaborationComplete(id: string): Promise<Application
   const { data, error } = await requireSupabase()
     .from('applications')
     .update({
-      status: 'pending_completion',
+      status: 'completed',
+      completed_at: now,
       brand_marked_complete_at: now,
+      creator_confirmed_at: now,
     })
     .eq('id', id)
-    .eq('status', 'in_progress')
+    .eq('status', 'approved')
     .select()
     .single()
   if (error) throw error
@@ -429,6 +441,8 @@ export async function fetchBrandApplicationStats(brandId: string) {
     accepted: stats.accepted,
     rejected: stats.rejected,
     in_progress: stats.in_progress,
+    content_submitted: stats.content_submitted,
+    approved: stats.approved,
     pending_completion: stats.pending_completion,
     completed: stats.completed,
     completedCollaborations,

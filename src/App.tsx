@@ -44,6 +44,8 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage'))
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'))
 const PublicCreatorProfile = lazy(() => import('./pages/PublicCreatorProfile'))
 const PostDetailPage = lazy(() => import('./pages/PostDetailPage'))
+const MessagesListPage = lazy(() => import('./pages/messages/MessagesListPage'))
+const ChatDetailPage = lazy(() => import('./pages/messages/ChatDetailPage'))
 
 function PageLoader() {
   return <LoadingState />
@@ -94,6 +96,8 @@ export default function App() {
               <Route path="posts/create" element={<EditCreatorPost />} />
               <Route path="posts/:id/edit" element={<EditCreatorPost />} />
               <Route path="notifications" element={<Navigate to="/notifications" replace />} />
+              <Route path="messages" element={<MessagesListPage />} />
+              <Route path="messages/:conversationId" element={<ChatDetailPage />} />
               <Route path="settings" element={<SettingsPage />} />
             </Route>
             <Route path="/creator/dashboard" element={<DashboardLayout navItems={creatorNavItems} />}>
@@ -114,6 +118,8 @@ export default function App() {
               <Route path="profile/create" element={<EditBrandProfile />} />
               <Route path="profile/edit" element={<EditBrandProfile />} />
               <Route path="notifications" element={<Navigate to="/notifications" replace />} />
+              <Route path="messages" element={<MessagesListPage />} />
+              <Route path="messages/:conversationId" element={<ChatDetailPage />} />
               <Route path="settings" element={<SettingsPage />} />
             </Route>
             <Route path="/brand/dashboard" element={<DashboardLayout navItems={brandNavItems} />}>

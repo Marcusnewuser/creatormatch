@@ -1,11 +1,12 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Home, Briefcase, FileText, User } from 'lucide-react'
+import { Home, Briefcase, FileText, MessageCircle, User } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
 const navItems = [
   { to: '/creator/home', icon: Home, label: 'Home' },
   { to: '/creator/campaigns', icon: Briefcase, label: 'Campaigns' },
   { to: '/creator/applications', icon: FileText, label: 'Applications' },
+  { to: '/creator/messages', icon: MessageCircle, label: 'Messages' },
   { to: '/creator/profile', icon: User, label: 'Profile' },
 ]
 

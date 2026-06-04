@@ -9,6 +9,7 @@ import {
   Users,
   Building2,
   BarChart3,
+  MessageCircle,
 } from 'lucide-react'
 import type { NavItem } from '../components/layout/Sidebar'
 
@@ -16,6 +17,7 @@ export const creatorNavItems: NavItem[] = [
   { to: '/creator/dashboard', icon: Home, label: 'Home' },
   { to: '/creator/campaigns', icon: Briefcase, label: 'Opportunities' },
   { to: '/creator/applications', icon: FileText, label: 'Applications' },
+  { to: '/creator/messages', icon: MessageCircle, label: 'Messages' },
   { to: '/creator/profile', icon: User, label: 'Profile' },
   { to: '/creator/settings', icon: Settings, label: 'Settings' },
 ]
@@ -23,6 +25,7 @@ export const creatorNavItems: NavItem[] = [
 export const brandNavItems: NavItem[] = [
   { to: '/brand/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/brand/campaigns', icon: Megaphone, label: 'Campaigns' },
+  { to: '/brand/messages', icon: MessageCircle, label: 'Messages' },
   { to: '/brand/dashboard', icon: Users, label: 'Applicants' },
   { to: '/brand/profile', icon: Building2, label: 'Company Profile' },
   { to: '/brand/settings', icon: Settings, label: 'Settings' },

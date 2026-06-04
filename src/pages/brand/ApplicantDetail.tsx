@@ -1,17 +1,21 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { CheckCircle2, ExternalLink, MapPin, Play, UserCircle } from 'lucide-react'
+import { CheckCircle2, ExternalLink, MapPin, MessageCircle, Play, UserCircle } from 'lucide-react'
 import { PageHeader } from '../../components/layout/PageHeader'
 import { Avatar } from '../../components/ui/Avatar'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { Badge } from '../../components/ui/Badge'
 import { LoadingState } from '../../components/ui/LoadingState'
+import { CollaborationTimeline } from '../../components/collaboration/CollaborationTimeline'
 import {
   applicationStatusBadgeVariant,
   applicationStatusLabel,
+  approveApplicationContent,
+  canAccessCollaborationChat,
+  completeCollaboration,
   fetchApplicationById,
-  markCollaborationComplete,
+  fetchConversationByApplication,
   startCollaboration,
   updateApplicationStatus,
 } from '../../lib/api'
@@ -26,9 +30,16 @@ export default function ApplicantDetail() {
   const [updating, setUpdating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const [conversationId, setConversationId] = useState<string | null>(null)
+
   useEffect(() => {
     if (!id) return
-    fetchApplicationById(id).then(setApplication).finally(() => setLoading(false))
+    fetchApplicationById(id).then((app) => {
+      setApplication(app)
+      if (app && canAccessCollaborationChat(app.status)) {
+        fetchConversationByApplication(app.id).then((c) => setConversationId(c?.id ?? null))
+      }
+    }).finally(() => setLoading(false))
   }, [id])
 
   async function handleStatus(status: 'accepted' | 'rejected') {
@@ -59,15 +70,29 @@ export default function ApplicantDetail() {
     }
   }
 
+  async function handleApproveContent() {
+    if (!application) return
+    setUpdating(true)
+    setError(null)
+    try {
+      const updated = await approveApplicationContent(application.id)
+      setApplication({ ...application, ...updated })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to approve content')
+    } finally {
+      setUpdating(false)
+    }
+  }
+
   async function handleMarkComplete() {
     if (!application) return
     setUpdating(true)
     setError(null)
     try {
-      const updated = await markCollaborationComplete(application.id)
+      const updated = await completeCollaboration(application.id)
       setApplication({ ...application, ...updated })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to mark collaboration complete')
+      setError(err instanceof Error ? err.message : 'Failed to complete collaboration')
     } finally {
       setUpdating(false)
     }
@@ -176,6 +201,20 @@ export default function ApplicantDetail() {
         </div>
       )}
 
+      {canAccessCollaborationChat(application.status) && (
+        <div className="mt-6">
+          <CollaborationTimeline status={application.status} />
+          {conversationId && (
+            <Link to={`/brand/messages/${conversationId}`} className="block mt-4">
+              <Button fullWidth variant="outline">
+                <MessageCircle className="h-4 w-4" />
+                Open Collaboration Chat
+              </Button>
+            </Link>
+          )}
+        </div>
+      )}
+
       {application.status === 'pending' && (
         <div className="mt-8 flex gap-3 animate-slide-up stagger-4">
           <Button
@@ -207,26 +246,36 @@ export default function ApplicantDetail() {
         </div>
       )}
 
-      {application.status === 'in_progress' && (
+      {application.status === 'content_submitted' && (
         <div className="mt-8 animate-slide-up stagger-4">
-          <Button fullWidth size="lg" loading={updating} onClick={handleMarkComplete}>
-            <CheckCircle2 className="h-4 w-4" />
-            Mark as Completed
+          <Button fullWidth size="lg" loading={updating} onClick={handleApproveContent}>
+            Approve Content
           </Button>
         </div>
       )}
 
+      {application.status === 'approved' && (
+        <div className="mt-8 animate-slide-up stagger-4">
+          <Button fullWidth size="lg" loading={updating} onClick={handleMarkComplete}>
+            <CheckCircle2 className="h-4 w-4" />
+            Mark Collaboration Complete
+          </Button>
+        </div>
+      )}
+
+      {application.status === 'in_progress' && (
+        <Card className="mt-8 animate-slide-up stagger-4">
+          <p className="text-sm text-text-secondary">
+            Waiting for the creator to submit content. Use chat to share briefs and assets.
+          </p>
+        </Card>
+      )}
+
       {application.status === 'pending_completion' && (
         <Card className="mt-8 animate-slide-up stagger-4">
-          <h2 className="text-sm font-semibold text-text-primary">Awaiting creator confirmation</h2>
-          <p className="mt-1 text-sm text-text-secondary">
-            You marked this collaboration as completed. The creator can confirm or request a review.
+          <p className="text-sm text-text-secondary">
+            Legacy status — open chat to continue the collaboration workflow.
           </p>
-          {application.review_requested_at && (
-            <Badge variant="warning" className="mt-3">
-              Review requested {formatDate(application.review_requested_at)}
-            </Badge>
-          )}
         </Card>
       )}
 

@@ -1,11 +1,11 @@
 import { Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Megaphone, Users, Building2 } from 'lucide-react'
+import { LayoutDashboard, Megaphone, MessageCircle, Building2 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
 const navItems = [
   { to: '/brand/home', icon: LayoutDashboard, label: 'Home' },
   { to: '/brand/campaigns', icon: Megaphone, label: 'Campaigns' },
-  { to: '/brand/dashboard', icon: Users, label: 'Applicants' },
+  { to: '/brand/messages', icon: MessageCircle, label: 'Messages' },
   { to: '/brand/profile', icon: Building2, label: 'Profile' },
 ]
 
