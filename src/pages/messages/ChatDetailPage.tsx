@@ -7,7 +7,7 @@ import { LoadingState } from '../../components/ui/LoadingState'
 import { CollaborationTimeline } from '../../components/collaboration/CollaborationTimeline'
 import { ContentSubmissionForm } from '../../components/collaboration/ContentSubmissionForm'
 import { SubmissionsList } from '../../components/collaboration/SubmissionsList'
-import { ChatFileCard } from '../../components/chat/ChatFileCard'
+import { ChatMessageList } from '../../components/chat/ChatMessageList'
 import { useAuth } from '../../contexts/AuthContext'
 import { useMessages } from '../../contexts/MessagesContext'
 import {
@@ -26,8 +26,6 @@ import {
   applicationStatusLabel,
 } from '../../lib/api'
 import { requireSupabase } from '../../lib/supabase'
-import { formatRelativeTime } from '../../lib/constants'
-import { cn } from '../../lib/utils'
 import type { ApplicationWithCreator, Message } from '../../types/database'
 import type { Submission } from '../../types/database'
 
@@ -288,41 +286,11 @@ export default function ChatDetailPage() {
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-[200px]">
-        {messages.map((msg) => {
-          const own = msg.sender_id === user?.id
-          return (
-            <div key={msg.id} className={cn('flex', own ? 'justify-end' : 'justify-start')}>
-              <div
-                className={cn(
-                  'max-w-[85%] rounded-2xl px-4 py-2.5',
-                  own
-                    ? 'bg-brand-primary text-white rounded-br-md'
-                    : 'bg-white border border-border text-text-primary rounded-bl-md',
-                )}
-              >
-                {msg.file_url && msg.file_name && (
-                  <div className="mb-2">
-                    <ChatFileCard fileUrl={msg.file_url} fileName={msg.file_name} isOwn={own} />
-                  </div>
-                )}
-                {msg.message && (
-                  <p className="text-sm whitespace-pre-wrap break-words">{msg.message}</p>
-                )}
-                <p
-                  className={cn(
-                    'text-[10px] mt-1',
-                    own ? 'text-white/70' : 'text-text-secondary',
-                  )}
-                >
-                  {formatRelativeTime(msg.created_at)}
-                </p>
-              </div>
-            </div>
-          )
-        })}
-        <div ref={messagesEndRef} />
-      </div>
+      <ChatMessageList
+        messages={messages}
+        currentUserId={user?.id}
+        scrollAnchorRef={messagesEndRef}
+      />
 
       <form
         onSubmit={handleSend}

@@ -18,8 +18,8 @@ export function ChatFileCard({ fileUrl, fileName, isOwn }: ChatFileCardProps) {
     <div
       className={
         isOwn
-          ? 'rounded-xl border border-white/20 bg-white/10 overflow-hidden max-w-[240px]'
-          : 'rounded-xl border border-border bg-gray-50 overflow-hidden max-w-[240px]'
+          ? 'rounded-[14px] border border-white/25 bg-white/15 overflow-hidden w-full max-w-full'
+          : 'rounded-[14px] border border-border bg-gray-50 overflow-hidden w-full max-w-full'
       }
     >
       {image ? (
@@ -28,10 +28,14 @@ export function ChatFileCard({ fileUrl, fileName, isOwn }: ChatFileCardProps) {
         </a>
       ) : (
         <div className="flex items-center gap-3 p-3">
-          <FileText className="h-8 w-8 text-brand-primary shrink-0" />
+          <FileText
+            className={`h-8 w-8 shrink-0 ${isOwn ? 'text-white' : 'text-brand-primary'}`}
+          />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium truncate">{fileName}</p>
-            <p className="text-xs opacity-70">Document</p>
+            <p className={`text-sm font-medium truncate ${isOwn ? 'text-white' : 'text-text-primary'}`}>
+              {fileName}
+            </p>
+            <p className={`text-xs ${isOwn ? 'text-white/70' : 'text-text-secondary'}`}>Document</p>
           </div>
         </div>
       )}
