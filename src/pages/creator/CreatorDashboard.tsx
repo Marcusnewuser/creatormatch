@@ -13,7 +13,7 @@ import {
   countCompletedCollaborations,
   fetchCreatorProfile,
   fetchRecentCampaigns,
-  fetchRecentMessagesForUser,
+  fetchRecentMessagesForRole,
   fetchRecentActivity,
 } from '../../lib/api'
 import { formatFollowers, formatRelativeTime } from '../../lib/constants'
@@ -43,7 +43,7 @@ export default function CreatorDashboard() {
       countApplicationsByStatus(user.id, 'creator'),
       countActiveCollaborations(user.id, 'creator'),
       countCompletedCollaborations(user.id, 'creator'),
-      fetchRecentMessagesForUser(user.id, 5),
+      fetchRecentMessagesForRole(user.id, 'creator', 5),
     ])
       .then(([creatorProfile, campaigns, recentActivity, appStats, active, completed, messages]) => {
         setProfile(creatorProfile)

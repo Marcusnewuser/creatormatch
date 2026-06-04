@@ -11,6 +11,8 @@ export type ApplicationStatus =
   | 'approved'
   | 'completed'
 
+export type MessageRoleContext = 'creator' | 'brand'
+
 export interface Conversation {
   id: string
   application_id: string

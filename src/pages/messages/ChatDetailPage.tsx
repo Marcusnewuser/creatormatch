@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useParams, useLocation } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { CheckCircle2, Paperclip, Send } from 'lucide-react'
 import { PageHeader } from '../../components/layout/PageHeader'
 import { Button } from '../../components/ui/Button'
@@ -9,14 +9,16 @@ import { ContentSubmissionForm } from '../../components/collaboration/ContentSub
 import { SubmissionsList } from '../../components/collaboration/SubmissionsList'
 import { ChatFileCard } from '../../components/chat/ChatFileCard'
 import { useAuth } from '../../contexts/AuthContext'
+import { useMessages } from '../../contexts/MessagesContext'
 import {
   approveApplicationContent,
   completeCollaboration,
   fetchApplicationById,
-  fetchConversationById,
+  fetchConversationByIdForRole,
   fetchMessages,
   fetchSubmissionsForApplication,
   markConversationRead,
+  resolveMessageRole,
   sendMessage,
   startCollaboration,
   subscribeToMessages,
@@ -31,9 +33,12 @@ import type { Submission } from '../../types/database'
 
 export default function ChatDetailPage() {
   const { conversationId } = useParams()
-  const location = useLocation()
-  const { user, activeMode } = useAuth()
-  const isBrand = location.pathname.startsWith('/brand') || activeMode === 'brand'
+  const navigate = useNavigate()
+  const { user, activeMode, hasCreatorProfile, hasBrandProfile } = useAuth()
+  const { refresh: refreshMessages } = useMessages()
+  const messageRole = resolveMessageRole(activeMode, hasCreatorProfile, hasBrandProfile)
+  const isBrand = messageRole === 'brand'
+  const messagesBase = isBrand ? '/brand/messages' : '/creator/messages'
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -55,9 +60,9 @@ export default function ChatDetailPage() {
 
   const loadData = useCallback(async () => {
     if (!conversationId || !user) return
-    const conv = await fetchConversationById(conversationId)
+    const conv = await fetchConversationByIdForRole(conversationId, user.id, messageRole)
     if (!conv) {
-      setError('Conversation not found')
+      setError('This conversation is not available in your current mode')
       setLoading(false)
       return
     }
@@ -96,13 +101,28 @@ export default function ChatDetailPage() {
     )
 
     await markConversationRead(conversationId, user.id)
+    refreshMessages().catch(() => undefined)
     setLoading(false)
     setTimeout(scrollToBottom, 100)
-  }, [conversationId, user, isBrand, scrollToBottom])
+  }, [conversationId, user, messageRole, isBrand, scrollToBottom, refreshMessages])
 
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  const prevRoleRef = useRef(messageRole)
+  useEffect(() => {
+    if (prevRoleRef.current === messageRole) return
+    prevRoleRef.current = messageRole
+    if (!conversationId || !user) return
+    fetchConversationByIdForRole(conversationId, user.id, messageRole).then((conv) => {
+      if (!conv) {
+        navigate(messagesBase, { replace: true })
+      } else {
+        loadData()
+      }
+    })
+  }, [messageRole, conversationId, user, navigate, messagesBase, loadData])
 
   useEffect(() => {
     if (!conversationId) return
@@ -132,6 +152,7 @@ export default function ChatDetailPage() {
       setMessages((prev) => [...prev, msg])
       setText('')
       scrollToBottom()
+      refreshMessages().catch(() => undefined)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send')
     } finally {

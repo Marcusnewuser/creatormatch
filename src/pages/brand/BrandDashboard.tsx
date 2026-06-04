@@ -15,7 +15,7 @@ import {
   fetchBrandApplicationStats,
   fetchBrandCampaigns,
   fetchRecentApplicantsForBrand,
-  fetchRecentMessagesForUser,
+  fetchRecentMessagesForRole,
   statusLabel,
 } from '../../lib/api'
 import { formatDate, formatRelativeTime } from '../../lib/constants'
@@ -41,7 +41,7 @@ export default function BrandDashboard() {
       fetchRecentApplicantsForBrand(user.id),
       fetchBrandApplicationStats(user.id),
       countActiveCollaborations(user.id, 'brand'),
-      fetchRecentMessagesForUser(user.id, 5),
+      fetchRecentMessagesForRole(user.id, 'brand', 5),
     ])
       .then(([brandCampaigns, recentApplicants, appStats, activeCollabs, messages]) => {
         setCampaigns(brandCampaigns)

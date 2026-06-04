@@ -8,6 +8,7 @@ import { Card } from '../../components/ui/Card'
 import { Badge } from '../../components/ui/Badge'
 import { LoadingState } from '../../components/ui/LoadingState'
 import { CollaborationTimeline } from '../../components/collaboration/CollaborationTimeline'
+import { useAuth } from '../../contexts/AuthContext'
 import {
   applicationStatusBadgeVariant,
   applicationStatusLabel,
@@ -25,6 +26,7 @@ import type { ApplicationWithCreator } from '../../types/database'
 export default function ApplicantDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [application, setApplication] = useState<ApplicationWithCreator | null>(null)
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState(false)
@@ -36,11 +38,13 @@ export default function ApplicantDetail() {
     if (!id) return
     fetchApplicationById(id).then((app) => {
       setApplication(app)
-      if (app && canAccessCollaborationChat(app.status)) {
-        fetchConversationByApplication(app.id).then((c) => setConversationId(c?.id ?? null))
+      if (app && user && canAccessCollaborationChat(app.status)) {
+        fetchConversationByApplication(app.id, user.id, 'brand').then((c) =>
+          setConversationId(c?.id ?? null),
+        )
       }
     }).finally(() => setLoading(false))
-  }, [id])
+  }, [id, user])
 
   async function handleStatus(status: 'accepted' | 'rejected') {
     if (!application) return

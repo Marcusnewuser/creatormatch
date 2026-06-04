@@ -61,10 +61,11 @@ export default function MyApplications() {
   }, [user])
 
   useEffect(() => {
+    if (!user) return
     const active = applications.filter((a) => canAccessCollaborationChat(a.status))
     Promise.all(
       active.map(async (a) => {
-        const conv = await fetchConversationByApplication(a.id)
+        const conv = await fetchConversationByApplication(a.id, user.id, 'creator')
         return conv ? ([a.id, conv.id] as const) : null
       }),
     ).then((pairs) => {

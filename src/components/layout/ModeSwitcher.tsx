@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Building2, Camera, ChevronDown } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
-import { useNotifications } from '../../contexts/NotificationsContext'
+import { useMessages } from '../../contexts/MessagesContext'
 import { getModeHomePath } from '../../lib/account-mode'
 import type { AppMode } from '../../types/database'
 import { cn } from '../../lib/utils'
@@ -21,7 +21,7 @@ export function ModeSwitcher() {
     isAdmin,
     switchMode,
   } = useAuth()
-  const { creatorUnreadCount, brandUnreadCount } = useNotifications()
+  const { creatorUnreadCount, brandUnreadCount } = useMessages()
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 

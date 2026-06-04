@@ -4,6 +4,7 @@ import './index.css'
 import App from './App'
 import { AuthProvider } from './contexts/AuthContext'
 import { NotificationsProvider } from './contexts/NotificationsContext'
+import { MessagesProvider } from './contexts/MessagesContext'
 import { ErrorBoundary } from './components/ErrorBoundary'
 
 createRoot(document.getElementById('root')!).render(
@@ -11,7 +12,9 @@ createRoot(document.getElementById('root')!).render(
     <ErrorBoundary>
       <AuthProvider>
         <NotificationsProvider>
-          <App />
+          <MessagesProvider>
+            <App />
+          </MessagesProvider>
         </NotificationsProvider>
       </AuthProvider>
     </ErrorBoundary>

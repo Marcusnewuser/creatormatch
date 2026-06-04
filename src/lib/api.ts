@@ -229,13 +229,18 @@ export {
 export type { ApplicationInsert } from './applications'
 
 export {
+  fetchConversationsForRole,
   fetchConversationsForUser,
   fetchConversationById,
+  fetchConversationByIdForRole,
   fetchConversationByApplication,
   fetchMessages,
   sendMessage,
   markConversationRead,
+  fetchTotalUnreadMessagesForRole,
   fetchTotalUnreadMessages,
+  fetchUnreadCountsByRole,
+  fetchRecentMessagesForRole,
   fetchRecentMessagesForUser,
   subscribeToMessages,
   uploadCollaborationFile,
@@ -243,6 +248,8 @@ export {
   approveApplicationContent,
   completeCollaboration,
   countActiveCollaborations,
+  resolveMessageRole,
+  canAccessConversationAsRole,
   COLLABORATION_FILE_MAX_BYTES,
 } from './collaborations'
 
