@@ -6,7 +6,6 @@ import { CreatorProfileHeader } from '../../components/creator/CreatorProfileHea
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Textarea } from '../../components/ui/Textarea'
-import { Select } from '../../components/ui/Select'
 import { LoadingState } from '../../components/ui/LoadingState'
 import { NativeFileInput } from '../../components/ui/NativeFileInput'
 import { useAuth } from '../../contexts/AuthContext'
@@ -15,15 +14,17 @@ import {
   updateCreatorProfile,
   uploadFile,
 } from '../../lib/api'
-import { CAMPAIGN_CATEGORIES } from '../../lib/constants'
+import { isValidUsername, normalizeUsernameInput } from '../../lib/creator-profile'
 import { getCurrencyForCountry, SUPPORTED_COUNTRIES } from '../../lib/currency'
-import { hasCreatorPostsTable, hasCurrencyColumns, hasPortfolioColumns } from '../../lib/schema'
+import { hasCreatorPostsTable, hasCreatorSocialColumns, hasCurrencyColumns, hasPortfolioColumns } from '../../lib/schema'
+import { Select } from '../../components/ui/Select'
 import type { CreatorProfile } from '../../types/database'
 
 const EMPTY_CREATOR_PROFILE: CreatorProfile = {
   id: '',
   user_id: '',
   full_name: null,
+  username: null,
   avatar_url: null,
   banner_url: null,
   bio: null,
@@ -35,7 +36,9 @@ const EMPTY_CREATOR_PROFILE: CreatorProfile = {
   average_likes: null,
   engagement_rate: null,
   instagram_url: null,
+  tiktok_url: null,
   xiaohongshu_url: null,
+  youtube_url: null,
   category: null,
   created_at: '',
   updated_at: '',
@@ -59,6 +62,7 @@ export default function EditCreatorProfile() {
   const [country, setCountry] = useState('')
   const [currencyColumnsReady, setCurrencyColumnsReady] = useState(false)
   const [portfolioColumnsReady, setPortfolioColumnsReady] = useState(false)
+  const [socialColumnsReady, setSocialColumnsReady] = useState(false)
   const [postsReady, setPostsReady] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -68,6 +72,8 @@ export default function EditCreatorProfile() {
 
   const preferredCurrency = getCurrencyForCountry(country) ?? ''
   const displayProfile = profile ?? { ...EMPTY_CREATOR_PROFILE, user_id: user?.id ?? '' }
+  const defaultUsername =
+    profile?.username ?? (user?.email ? normalizeUsernameInput(user.email.split('@')[0]) : '')
 
   useEffect(() => {
     if (!user) return
@@ -75,13 +81,15 @@ export default function EditCreatorProfile() {
       fetchCreatorProfileWithPosts(user.id),
       hasCurrencyColumns(),
       hasPortfolioColumns(),
+      hasCreatorSocialColumns(),
       hasCreatorPostsTable(),
     ])
-      .then(([data, currencyReady, portfolioReady, postsTableReady]) => {
+      .then(([data, currencyReady, portfolioReady, socialReady, postsTableReady]) => {
         setProfile(data?.profile ?? null)
         setCountry(data?.profile?.country ?? '')
         setCurrencyColumnsReady(currencyReady)
         setPortfolioColumnsReady(portfolioReady)
+        setSocialColumnsReady(socialReady)
         setPostsReady(postsTableReady)
       })
       .finally(() => setLoading(false))
@@ -128,6 +136,13 @@ export default function EditCreatorProfile() {
     if (!user) return
     const form = new FormData(e.currentTarget)
 
+    const usernameRaw = (form.get('username') as string) ?? ''
+    const username = socialColumnsReady ? normalizeUsernameInput(usernameRaw) : null
+    if (socialColumnsReady && username && !isValidUsername(username)) {
+      setError('Username must be 3–30 characters: lowercase letters, numbers, and underscores only.')
+      return
+    }
+
     setSaving(true)
     setError(null)
 
@@ -136,11 +151,15 @@ export default function EditCreatorProfile() {
         full_name: (form.get('full_name') as string) || null,
         bio: (form.get('bio') as string) || null,
         location: (form.get('location') as string) || null,
-        follower_count: Number(form.get('follower_count')) || 0,
         instagram_url: (form.get('instagram_url') as string) || null,
         xiaohongshu_url: (form.get('xiaohongshu_url') as string) || null,
-        category: (form.get('category') as string) || null,
         avatar_url: profile?.avatar_url ?? null,
+      }
+
+      if (socialColumnsReady) {
+        updates.username = username
+        updates.tiktok_url = (form.get('tiktok_url') as string) || null
+        updates.youtube_url = (form.get('youtube_url') as string) || null
       }
 
       if (portfolioColumnsReady) {
@@ -184,7 +203,11 @@ export default function EditCreatorProfile() {
       )}
 
       <div className="mb-6 animate-slide-up">
-        <CreatorProfileHeader profile={displayProfile} showLocation={false} />
+        <CreatorProfileHeader
+          profile={displayProfile}
+          showLocation={false}
+          username={defaultUsername ?? undefined}
+        />
         <div className="mt-4 space-y-4 rounded-xl border border-border bg-white p-4 shadow-soft">
           <NativeFileInput
             id={avatarInputId}
@@ -214,12 +237,30 @@ export default function EditCreatorProfile() {
 
         {currencyColumnsReady === false && (
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            Country and currency fields are unavailable until migration{' '}
+            Country fields are unavailable until migration{' '}
             <code className="text-xs">004_currency_support.sql</code> is run in Supabase.
           </div>
         )}
 
+        {!socialColumnsReady && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            Run migration <code className="text-xs">019_creator_profile_social_links.sql</code> for username
+            and TikTok / YouTube links.
+          </div>
+        )}
+
         <Input label="Name" name="full_name" defaultValue={profile?.full_name ?? ''} required />
+
+        {socialColumnsReady && (
+          <Input
+            label="Username"
+            name="username"
+            defaultValue={defaultUsername ?? ''}
+            placeholder="yourname"
+            hint="3–30 characters. Letters, numbers, and underscores only."
+          />
+        )}
+
         <Textarea label="Bio" name="bio" defaultValue={profile?.bio ?? ''} />
 
         {currencyColumnsReady && (
@@ -244,25 +285,49 @@ export default function EditCreatorProfile() {
         )}
 
         <Input label="Location" name="location" defaultValue={profile?.location ?? ''} />
-        <Input
-          label="Followers"
-          name="follower_count"
-          type="number"
-          min={0}
-          defaultValue={profile?.follower_count ?? 0}
-        />
 
-        <Select
-          label="Category"
-          name="category"
-          defaultValue={profile?.category ?? ''}
-          options={[
-            { value: '', label: 'Select a category' },
-            ...CAMPAIGN_CATEGORIES.map((c) => ({ value: c, label: c })),
-          ]}
-        />
-        <Input label="Instagram URL" name="instagram_url" defaultValue={profile?.instagram_url ?? ''} />
-        <Input label="Xiaohongshu URL" name="xiaohongshu_url" defaultValue={profile?.xiaohongshu_url ?? ''} />
+        <div className="pt-2">
+          <h3 className="text-sm font-semibold text-text-primary mb-3">Social Media Links</h3>
+          <div className="space-y-4">
+            <Input
+              label="Instagram"
+              name="instagram_url"
+              type="url"
+              placeholder="https://instagram.com/username"
+              defaultValue={profile?.instagram_url ?? ''}
+            />
+            {socialColumnsReady && (
+              <Input
+                label="TikTok"
+                name="tiktok_url"
+                type="url"
+                placeholder="https://tiktok.com/@username"
+                defaultValue={profile?.tiktok_url ?? ''}
+              />
+            )}
+            <Input
+              label="Xiaohongshu"
+              name="xiaohongshu_url"
+              type="url"
+              placeholder="https://xiaohongshu.com/user/profile/..."
+              defaultValue={profile?.xiaohongshu_url ?? ''}
+            />
+            {socialColumnsReady && (
+              <Input
+                label="YouTube"
+                name="youtube_url"
+                type="url"
+                placeholder="https://youtube.com/@channel"
+                defaultValue={profile?.youtube_url ?? ''}
+              />
+            )}
+          </div>
+          <p className="mt-2 text-xs text-text-secondary">
+            Follower counts are not self-reported. Verified stats will come from platform integrations in the
+            future.
+          </p>
+        </div>
+
         <Button type="submit" fullWidth size="lg" loading={saving}>
           {isCreate ? 'Create Profile' : 'Save Profile'}
         </Button>

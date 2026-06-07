@@ -1,108 +1,130 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Users, Building2, Megaphone, FileText, BarChart3, TrendingUp } from 'lucide-react'
+import {
+  Users,
+  Building2,
+  Megaphone,
+  FileText,
+  MessageCircle,
+  Handshake,
+  CheckCircle2,
+  UserCircle,
+} from 'lucide-react'
 import { StatCard } from '../../components/ui/StatCard'
 import { Card } from '../../components/ui/Card'
 import { LoadingState } from '../../components/ui/LoadingState'
-import { fetchAdminStats, fetchRecentActivity } from '../../lib/api'
-import { formatRelativeTime } from '../../lib/constants'
+import { AdminPageHeader } from '../../components/admin/AdminPageHeader'
+import { fetchAdminDashboardStats, type AdminDashboardStats } from '../../lib/admin'
+
+function trendLabel(pct: number): string {
+  if (pct > 0) return `+${pct}% vs prior 30 days`
+  if (pct < 0) return `${pct}% vs prior 30 days`
+  return 'No change vs prior 30 days'
+}
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState({ creators: 0, brands: 0, campaigns: 0, applications: 0 })
-  const [activity, setActivity] = useState<{ id: string; text: string; time: string }[]>([])
+  const [stats, setStats] = useState<AdminDashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    Promise.all([fetchAdminStats(), fetchRecentActivity(5)])
-      .then(([adminStats, recentActivity]) => {
-        setStats(adminStats)
-        setActivity(recentActivity)
-      })
-      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load admin data'))
+    fetchAdminDashboardStats()
+      .then(setStats)
+      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load'))
       .finally(() => setLoading(false))
   }, [])
 
   if (loading) return <LoadingState />
   if (error) return <div className="text-red-600 text-sm">{error}</div>
+  if (!stats) return null
 
   return (
     <div className="animate-fade-in">
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-text-primary tracking-tight">Admin Dashboard</h1>
-        <p className="mt-1 text-sm text-text-secondary">Platform overview and management</p>
+      <AdminPageHeader
+        title="Admin Dashboard"
+        subtitle="Platform overview — admin access only"
+      />
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-6">
+        <StatCard
+          label="Total Users"
+          value={stats.totalUsers.toLocaleString()}
+          icon={<UserCircle className="h-5 w-5" />}
+          trend={trendLabel(stats.growth.users)}
+          trendUp={stats.growth.users >= 0}
+        />
+        <StatCard
+          label="Total Creators"
+          value={stats.totalCreators.toLocaleString()}
+          icon={<Users className="h-5 w-5" />}
+          trend={trendLabel(stats.growth.creators)}
+          trendUp={stats.growth.creators >= 0}
+        />
+        <StatCard
+          label="Total Brands"
+          value={stats.totalBrands.toLocaleString()}
+          icon={<Building2 className="h-5 w-5" />}
+          trend={trendLabel(stats.growth.brands)}
+          trendUp={stats.growth.brands >= 0}
+        />
+        <StatCard
+          label="Total Campaigns"
+          value={stats.totalCampaigns.toLocaleString()}
+          icon={<Megaphone className="h-5 w-5" />}
+          trend={trendLabel(stats.growth.campaigns)}
+          trendUp={stats.growth.campaigns >= 0}
+        />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-        <StatCard label="Total Creators" value={stats.creators.toLocaleString()} icon={<Users className="h-5 w-5" />} />
-        <StatCard label="Total Brands" value={stats.brands.toLocaleString()} icon={<Building2 className="h-5 w-5" />} />
-        <StatCard label="Total Campaigns" value={stats.campaigns.toLocaleString()} icon={<Megaphone className="h-5 w-5" />} />
-        <StatCard label="Total Applications" value={stats.applications.toLocaleString()} icon={<FileText className="h-5 w-5" />} />
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-8">
+        <StatCard
+          label="Total Applications"
+          value={stats.totalApplications.toLocaleString()}
+          icon={<FileText className="h-5 w-5" />}
+          trend={trendLabel(stats.growth.applications)}
+          trendUp={stats.growth.applications >= 0}
+        />
+        <StatCard
+          label="Active Collaborations"
+          value={stats.activeCollaborations.toLocaleString()}
+          icon={<Handshake className="h-5 w-5" />}
+          trend={trendLabel(stats.growth.collaborations)}
+          trendUp={stats.growth.collaborations >= 0}
+        />
+        <StatCard
+          label="Completed Collaborations"
+          value={stats.completedCollaborations.toLocaleString()}
+          icon={<CheckCircle2 className="h-5 w-5" />}
+        />
+        <StatCard
+          label="Messages Sent"
+          value={stats.messagesSent.toLocaleString()}
+          icon={<MessageCircle className="h-5 w-5" />}
+          trend={trendLabel(stats.growth.messages)}
+          trendUp={stats.growth.messages >= 0}
+        />
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <h2 className="text-lg font-semibold text-text-primary mb-4">Platform Overview</h2>
-          <Card className="h-64 flex items-center justify-center">
-            <div className="text-center">
-              <BarChart3 className="h-12 w-12 text-brand-primary mx-auto mb-3" />
-              <p className="text-sm text-text-secondary">
-                {stats.creators + stats.brands} total users · {stats.applications} applications submitted
-              </p>
-            </div>
-          </Card>
-        </div>
-
-        <div>
-          <h2 className="text-lg font-semibold text-text-primary mb-4">Recent Activity</h2>
-          <Card padding="none">
-            {activity.length === 0 ? (
-              <p className="px-4 py-6 text-sm text-text-secondary">No recent activity.</p>
-            ) : (
-              <div className="divide-y divide-border">
-                {activity.map((item) => (
-                  <div key={item.id} className="px-4 py-3">
-                    <p className="text-sm text-text-primary">{item.text}</p>
-                    <p className="text-xs text-text-secondary mt-1">{formatRelativeTime(item.time)}</p>
-                  </div>
-                ))}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {[
+          { to: '/admin/users', label: 'User Management', icon: Users },
+          { to: '/admin/creators', label: 'Creator Management', icon: Users },
+          { to: '/admin/brands', label: 'Brand Management', icon: Building2 },
+          { to: '/admin/campaigns', label: 'Campaign Management', icon: Megaphone },
+          { to: '/admin/applications', label: 'Applications', icon: FileText },
+          { to: '/admin/collaborations', label: 'Collaborations', icon: Handshake },
+          { to: '/admin/reports', label: 'Reports', icon: FileText },
+          { to: '/admin/analytics', label: 'Analytics', icon: Megaphone },
+        ].map(({ to, label, icon: Icon }) => (
+          <Link key={to} to={to}>
+            <Card hover className="flex items-center gap-3 py-4 px-5 cursor-pointer">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-light text-brand-primary">
+                <Icon className="h-5 w-5" />
               </div>
-            )}
-          </Card>
-
-          <Card className="mt-4 bg-brand-light border-brand-primary/10">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-primary text-white">
-                <TrendingUp className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-text-primary">Platform Health</p>
-                <p className="text-xs text-text-secondary">All systems operational</p>
-              </div>
-            </div>
-          </Card>
-        </div>
-      </div>
-
-      <div className="mt-8 grid gap-4 sm:grid-cols-3">
-        <Link to="/admin/creators">
-          <Card hover className="text-center py-6 cursor-pointer">
-            <Users className="h-8 w-8 text-brand-primary mx-auto mb-2" />
-            <p className="font-medium text-text-primary">Manage Creators</p>
-          </Card>
-        </Link>
-        <Link to="/admin/brands">
-          <Card hover className="text-center py-6 cursor-pointer">
-            <Building2 className="h-8 w-8 text-brand-primary mx-auto mb-2" />
-            <p className="font-medium text-text-primary">Manage Brands</p>
-          </Card>
-        </Link>
-        <Link to="/admin/reports">
-          <Card hover className="text-center py-6 cursor-pointer">
-            <BarChart3 className="h-8 w-8 text-brand-primary mx-auto mb-2" />
-            <p className="font-medium text-text-primary">View Reports</p>
-          </Card>
-        </Link>
+              <p className="font-medium text-text-primary">{label}</p>
+            </Card>
+          </Link>
+        ))}
       </div>
     </div>
   )

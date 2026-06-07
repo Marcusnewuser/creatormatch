@@ -1,7 +1,12 @@
 import { requireSupabase } from './supabase'
+import {
+  filterNotificationsForAccount,
+  matchesNotificationAccountType,
+  normalizeNotificationRow,
+} from './notification-account'
 import type {
   Notification,
-  NotificationRoleContext,
+  NotificationAccountType,
   NotificationType,
 } from '../types/database'
 
@@ -30,12 +35,28 @@ export function notificationTypeLabel(type: NotificationType): string {
       return 'Completion'
     case 'collaboration_confirmed':
       return 'Confirmed'
+    case 'collaboration_invitation':
+      return 'Invitation'
     case 'review_requested':
       return 'Review'
     case 'campaign_expiring':
       return 'Expiring'
     case 'campaign_closed':
       return 'Closed'
+    case 'new_message':
+      return 'Message'
+    case 'file_request':
+      return 'File'
+    case 'content_submitted':
+      return 'Content'
+    case 'submission_approved':
+      return 'Approved'
+    case 'admin_user_registered':
+      return 'New User'
+    case 'admin_campaign_created':
+      return 'New Campaign'
+    case 'admin_report_submitted':
+      return 'Report'
   }
 }
 
@@ -45,12 +66,18 @@ export function getNotificationLink(type: NotificationType): string {
     case 'application_withdrawn':
     case 'collaboration_confirmed':
     case 'review_requested':
+    case 'content_submitted':
       return '/brand/campaigns'
     case 'application_submitted':
     case 'application_accepted':
     case 'application_rejected':
     case 'collaboration_marked_complete':
+    case 'collaboration_invitation':
+    case 'submission_approved':
       return '/creator/applications'
+    case 'new_message':
+    case 'file_request':
+      return '/messages'
     case 'campaign_recommended':
       return '/creator/campaigns'
     case 'profile_viewed':
@@ -58,37 +85,54 @@ export function getNotificationLink(type: NotificationType): string {
     case 'campaign_expiring':
     case 'campaign_closed':
       return '/brand/campaigns'
+    case 'admin_user_registered':
+      return '/admin/users'
+    case 'admin_campaign_created':
+      return '/admin/campaigns'
+    case 'admin_report_submitted':
+      return '/admin/reports'
   }
 }
 
-export async function fetchNotifications(
-  userId: string,
-  roleContext: NotificationRoleContext,
-  limit = 50,
-): Promise<Notification[]> {
+/** Fetch user notifications and filter by workspace in-app (avoids DB column name mismatches). */
+async function fetchUserNotifications(userId: string, limit = 100): Promise<Notification[]> {
   const { data, error } = await requireSupabase()
     .from('notifications')
     .select('*')
     .eq('user_id', userId)
-    .eq('role_context', roleContext)
     .order('created_at', { ascending: false })
     .limit(limit)
+
   if (error) throw error
-  return data ?? []
+
+  return (data ?? []).map((row) => normalizeNotificationRow(row as Record<string, unknown>))
+}
+
+export async function fetchNotifications(
+  userId: string,
+  accountType: NotificationAccountType,
+  limit = 50,
+): Promise<Notification[]> {
+  const rows = await fetchUserNotifications(userId, Math.max(limit * 3, 100))
+  return filterNotificationsForAccount(rows, accountType).slice(0, limit)
 }
 
 export async function fetchUnreadNotificationCount(
   userId: string,
-  roleContext: NotificationRoleContext,
+  accountType: NotificationAccountType,
 ): Promise<number> {
-  const { count, error } = await requireSupabase()
+  const { data, error } = await requireSupabase()
     .from('notifications')
-    .select('*', { count: 'exact', head: true })
+    .select('*')
     .eq('user_id', userId)
-    .eq('role_context', roleContext)
     .eq('is_read', false)
+    .limit(200)
+
   if (error) throw error
-  return count ?? 0
+
+  return (data ?? [])
+    .map((row) => normalizeNotificationRow(row as Record<string, unknown>))
+    .filter((n) => matchesNotificationAccountType(n, accountType)).length
 }
 
 export async function fetchUnreadCountsByRole(userId: string): Promise<RoleUnreadCounts> {
@@ -110,14 +154,18 @@ export async function markNotificationRead(notificationId: string, userId: strin
 
 export async function markAllNotificationsRead(
   userId: string,
-  roleContext: NotificationRoleContext,
+  accountType: NotificationAccountType,
 ): Promise<void> {
+  const unread = await fetchNotifications(userId, accountType, 200)
+  const unreadIds = unread.filter((n) => !n.is_read).map((n) => n.id)
+  if (unreadIds.length === 0) return
+
   const { error } = await requireSupabase()
     .from('notifications')
     .update({ is_read: true })
     .eq('user_id', userId)
-    .eq('role_context', roleContext)
-    .eq('is_read', false)
+    .in('id', unreadIds)
+
   if (error) throw error
 }
 

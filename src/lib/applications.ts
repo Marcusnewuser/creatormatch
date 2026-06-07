@@ -1,8 +1,10 @@
 import { requireSupabase } from './supabase'
 import { attachBrandProfiles } from './campaigns'
+import { countCompletedCollaborationsFromRecords } from './collaboration-completions'
 import {
   fetchCampaignIdsForBrand,
   hasApplicationSystemV2,
+  hasCollaborationCompletionsTable,
   normalizeApplication,
   normalizeCampaign,
   toApplicationWritePayload,
@@ -363,7 +365,10 @@ export async function requestCollaborationReview(id: string): Promise<Applicatio
   return normalizeApplication(data, brandId)
 }
 
-export async function countCompletedCollaborations(userId: string, role: 'creator' | 'brand'): Promise<number> {
+async function countCompletedCollaborationsFromApplications(
+  userId: string,
+  role: 'creator' | 'brand',
+): Promise<number> {
   const applicationV2 = await hasApplicationSystemV2()
 
   if (role === 'creator') {
@@ -397,6 +402,13 @@ export async function countCompletedCollaborations(userId: string, role: 'creato
     .eq('status', 'completed')
   if (error) throw error
   return count ?? 0
+}
+
+export async function countCompletedCollaborations(userId: string, role: 'creator' | 'brand'): Promise<number> {
+  if (await hasCollaborationCompletionsTable()) {
+    return countCompletedCollaborationsFromRecords(userId, role)
+  }
+  return countCompletedCollaborationsFromApplications(userId, role)
 }
 
 export async function countApplicationsByStatus(userId: string, role: UserRole) {

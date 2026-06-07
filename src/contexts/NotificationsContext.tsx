@@ -16,15 +16,17 @@ import {
   subscribeToNotifications,
   type RoleUnreadCounts,
 } from '../lib/notifications'
-import { hasNotificationRoleContext, hasNotificationsTable } from '../lib/schema'
-import type { AppMode, Notification, NotificationRoleContext } from '../types/database'
+import { filterNotificationsForAccount } from '../lib/notification-account'
+import { hasNotificationsTable } from '../lib/schema'
+import { isAdmin } from '../lib/account-mode'
+import type { AppMode, Notification, NotificationAccountType } from '../types/database'
 
 interface NotificationsContextValue {
   notifications: Notification[]
   unreadCount: number
   creatorUnreadCount: number
   brandUnreadCount: number
-  activeRoleContext: NotificationRoleContext
+  activeAccountType: NotificationAccountType
   loading: boolean
   ready: boolean
   error: string | null
@@ -35,11 +37,11 @@ interface NotificationsContextValue {
 
 const NotificationsContext = createContext<NotificationsContextValue | undefined>(undefined)
 
-function resolveRoleContext(
+function resolveAccountType(
   activeMode: AppMode | null,
   hasCreatorProfile: boolean,
   hasBrandProfile: boolean,
-): NotificationRoleContext {
+): NotificationAccountType {
   if (activeMode === 'brand' && hasBrandProfile) return 'brand'
   if (activeMode === 'creator' && hasCreatorProfile) return 'creator'
   if (hasBrandProfile && !hasCreatorProfile) return 'brand'
@@ -47,52 +49,67 @@ function resolveRoleContext(
 }
 
 export function NotificationsProvider({ children }: { children: ReactNode }) {
-  const { user, activeMode, hasCreatorProfile, hasBrandProfile } = useAuth()
-  const [allNotifications, setAllNotifications] = useState<Notification[]>([])
+  const { user, profile, activeMode, hasCreatorProfile, hasBrandProfile } = useAuth()
+  const [activeNotifications, setActiveNotifications] = useState<Notification[]>([])
   const [unreadByRole, setUnreadByRole] = useState<RoleUnreadCounts>({ creator: 0, brand: 0 })
   const [loading, setLoading] = useState(true)
   const [ready, setReady] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const activeRoleContext = useMemo(
-    () => resolveRoleContext(activeMode, hasCreatorProfile, hasBrandProfile),
-    [activeMode, hasCreatorProfile, hasBrandProfile],
-  )
+  const activeAccountType = useMemo((): NotificationAccountType => {
+    if (isAdmin(profile)) return 'admin'
+    return resolveAccountType(activeMode, hasCreatorProfile, hasBrandProfile)
+  }, [profile, activeMode, hasCreatorProfile, hasBrandProfile])
 
   const notifications = useMemo(
-    () => allNotifications.filter((n) => n.role_context === activeRoleContext),
-    [allNotifications, activeRoleContext],
+    () => filterNotificationsForAccount(activeNotifications, activeAccountType),
+    [activeNotifications, activeAccountType],
   )
 
-  const unreadCount = unreadByRole[activeRoleContext]
+  const unreadCount =
+    activeAccountType === 'admin'
+      ? activeNotifications.filter((n) => n.account_type === 'admin' && !n.is_read).length
+      : unreadByRole[activeAccountType]
 
   const refresh = useCallback(async () => {
     if (!user || !ready) return
 
-    const roles: NotificationRoleContext[] = []
-    if (hasCreatorProfile) roles.push('creator')
-    if (hasBrandProfile) roles.push('brand')
-    if (roles.length === 0) roles.push(activeRoleContext)
+    if (isAdmin(profile)) {
+      const list = await fetchNotifications(user.id, 'admin')
+      setActiveNotifications(list)
+      setUnreadByRole({ creator: 0, brand: 0 })
+      setError(null)
+      return
+    }
 
-    const [counts, ...lists] = await Promise.all([
+    const [counts, list] = await Promise.all([
       fetchUnreadCountsByRole(user.id),
-      ...roles.map((role) => fetchNotifications(user.id, role)),
+      fetchNotifications(user.id, activeAccountType),
     ])
 
-    const merged = lists
-      .flat()
-      .sort((a, b) => b.created_at.localeCompare(a.created_at))
-
-    setAllNotifications(merged)
+    setActiveNotifications(list)
     setUnreadByRole(counts)
     setError(null)
-  }, [user, ready, hasCreatorProfile, hasBrandProfile, activeRoleContext])
+  }, [user, profile, ready, activeAccountType])
 
   useEffect(() => {
-    Promise.all([hasNotificationsTable(), hasNotificationRoleContext()]).then(
-      ([table, roleContext]) => setReady(table && roleContext),
-    )
-  }, [])
+    if (!user) {
+      setReady(false)
+      setLoading(false)
+      setActiveNotifications([])
+      setUnreadByRole({ creator: 0, brand: 0 })
+      return
+    }
+
+    let cancelled = false
+    hasNotificationsTable().then((tableReady) => {
+      if (!cancelled) setReady(tableReady)
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [user])
 
   useEffect(() => {
     if (!user || !ready) {
@@ -102,11 +119,12 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
     let cancelled = false
     setLoading(true)
+    setError(null)
 
     refresh()
       .catch((err) => {
         if (!cancelled) {
-          setAllNotifications([])
+          setActiveNotifications([])
           setUnreadByRole({ creator: 0, brand: 0 })
           setError(err instanceof Error ? err.message : 'Failed to load notifications')
         }
@@ -130,36 +148,39 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       cancelled = true
       unsubscribe()
     }
-  }, [user, ready, refresh])
+  }, [user, ready, activeAccountType, refresh])
 
   const markAsRead = useCallback(
     async (notificationId: string) => {
       if (!user) return
 
-      const target = allNotifications.find((n) => n.id === notificationId)
+      const target = activeNotifications.find((n) => n.id === notificationId)
       if (!target || target.is_read) return
 
       await markNotificationRead(notificationId, user.id)
-      setAllNotifications((prev) =>
+      setActiveNotifications((prev) =>
         prev.map((n) => (n.id === notificationId ? { ...n, is_read: true } : n)),
       )
-      setUnreadByRole((prev) => ({
-        ...prev,
-        [target.role_context]: Math.max(prev[target.role_context] - 1, 0),
-      }))
+      if (target.account_type === 'creator' || target.account_type === 'brand') {
+        const role = target.account_type
+        setUnreadByRole((prev) => ({
+          ...prev,
+          [role]: Math.max(prev[role] - 1, 0),
+        }))
+      }
     },
-    [user, allNotifications],
+    [user, activeNotifications],
   )
 
   const markAllAsRead = useCallback(async () => {
     if (!user) return
 
-    await markAllNotificationsRead(user.id, activeRoleContext)
-    setAllNotifications((prev) =>
-      prev.map((n) => (n.role_context === activeRoleContext ? { ...n, is_read: true } : n)),
-    )
-    setUnreadByRole((prev) => ({ ...prev, [activeRoleContext]: 0 }))
-  }, [user, activeRoleContext])
+    await markAllNotificationsRead(user.id, activeAccountType)
+    setActiveNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })))
+    if (activeAccountType !== 'admin') {
+      setUnreadByRole((prev) => ({ ...prev, [activeAccountType]: 0 }))
+    }
+  }, [user, activeAccountType])
 
   const value = useMemo(
     () => ({
@@ -167,7 +188,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       unreadCount,
       creatorUnreadCount: unreadByRole.creator,
       brandUnreadCount: unreadByRole.brand,
-      activeRoleContext,
+      activeAccountType,
       loading,
       ready,
       error,
@@ -179,7 +200,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       notifications,
       unreadCount,
       unreadByRole,
-      activeRoleContext,
+      activeAccountType,
       loading,
       ready,
       error,
@@ -200,4 +221,9 @@ export function useNotifications() {
     throw new Error('useNotifications must be used within NotificationsProvider')
   }
   return context
+}
+
+/** @deprecated Use activeAccountType from useNotifications */
+export function useNotificationsActiveRoleContext(): NotificationAccountType {
+  return useNotifications().activeAccountType
 }

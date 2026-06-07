@@ -1,7 +1,9 @@
 import { requireSupabase } from './supabase'
 import { attachBrandProfiles } from './campaigns'
+import { stripSelfReportedProfileStats } from './creator-profile'
 import {
   hasBrandBannerColumn,
+  hasCreatorSocialColumns,
   hasCurrencyColumns,
   hasPrimaryModeColumn,
   hasPortfolioColumns,
@@ -110,12 +112,22 @@ export async function updateCreatorProfile(
   userId: string,
   updates: Partial<Omit<CreatorProfile, 'id' | 'user_id' | 'created_at' | 'updated_at'>>,
 ): Promise<CreatorProfile> {
-  const [currencyMigrated, portfolioMigrated] = await Promise.all([
+  const [currencyMigrated, portfolioMigrated, socialMigrated] = await Promise.all([
     hasCurrencyColumns(),
     hasPortfolioColumns(),
+    hasCreatorSocialColumns(),
   ])
-  let payload = stripCountryFieldsIfNeeded(updates, currencyMigrated)
+  let payload = stripSelfReportedProfileStats(updates)
+  payload = stripCountryFieldsIfNeeded(payload, currencyMigrated)
   payload = stripPortfolioFieldsIfNeeded(payload, portfolioMigrated)
+  if (!socialMigrated) {
+    const { username, tiktok_url, youtube_url, ...rest } = payload as typeof payload & {
+      username?: unknown
+      tiktok_url?: unknown
+      youtube_url?: unknown
+    }
+    payload = rest as typeof payload
+  }
 
   const { data: existing } = await requireSupabase()
     .from('creator_profiles')
@@ -296,26 +308,42 @@ export {
   getNotificationLink,
 } from './notifications'
 
-export async function fetchAdminStats() {
-  const [creators, brands, campaigns, applications] = await Promise.all([
-    requireSupabase().from('creator_profiles').select('*', { count: 'exact', head: true }),
-    requireSupabase().from('brand_profiles').select('*', { count: 'exact', head: true }),
-    requireSupabase().from('campaigns').select('*', { count: 'exact', head: true }),
-    requireSupabase().from('applications').select('*', { count: 'exact', head: true }),
-  ])
-
-  if (creators.error) throw creators.error
-  if (brands.error) throw brands.error
-  if (campaigns.error) throw campaigns.error
-  if (applications.error) throw applications.error
-
-  return {
-    creators: creators.count ?? 0,
-    brands: brands.count ?? 0,
-    campaigns: campaigns.count ?? 0,
-    applications: applications.count ?? 0,
-  }
-}
+export {
+  fetchAdminStats,
+  fetchAdminDashboardStats,
+  fetchAdminUsers,
+  fetchAdminUserDetail,
+  adminSetUserSuspended,
+  adminDeleteUser,
+  fetchAdminCreators,
+  fetchAdminBrands,
+  adminDeleteCreatorProfile,
+  adminDeleteBrandProfile,
+  fetchAdminCampaigns,
+  adminUpdateCampaign,
+  adminDeleteCampaign,
+  fetchAdminApplications,
+  fetchAdminCollaborations,
+  fetchAdminReports,
+  adminUpdateReport,
+  submitReport,
+  fetchAdminAnalytics,
+  adminGlobalSearch,
+} from './admin'
+export type {
+  AdminDashboardStats,
+  AdminUserRow,
+  AdminCreatorRow,
+  AdminBrandRow,
+  AdminCampaignRow,
+  AdminApplicationRow,
+  AdminCollaborationRow,
+  AdminReport,
+  AdminAnalytics,
+  AdminSearchResult,
+  ReportType,
+  ReportStatus,
+} from './admin'
 
 export async function uploadFile(
   bucket: 'avatars' | 'logos' | 'campaign-images' | 'portfolio' | 'collaboration-files',

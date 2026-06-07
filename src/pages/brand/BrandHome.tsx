@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Plus, Users, Megaphone, TrendingUp } from 'lucide-react'
 import { Avatar } from '../../components/ui/Avatar'
+import { HomeWelcomeHeader } from '../../components/layout/HomeWelcomeHeader'
 import { StatCard } from '../../components/ui/StatCard'
 import { Card } from '../../components/ui/Card'
 import { Badge } from '../../components/ui/Badge'
@@ -45,22 +46,21 @@ export default function BrandHome() {
 
   return (
     <div className="px-4 pt-6 animate-fade-in">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          {profile?.logo_url ? (
-            <img src={profile.logo_url} alt={profile.company_name ?? 'Brand'} className="h-10 w-10 rounded-xl object-cover" />
+      <HomeWelcomeHeader
+        avatar={
+          profile?.logo_url ? (
+            <img
+              src={profile.logo_url}
+              alt={profile.company_name ?? 'Brand'}
+              className="h-10 w-10 shrink-0 rounded-xl object-cover"
+            />
           ) : (
             <Avatar name={profile?.company_name ?? 'Brand'} size="md" />
-          )}
-          <div>
-            <p className="text-sm text-text-secondary">Brand Dashboard</p>
-            <h1 className="text-lg font-semibold text-text-primary">{profile?.company_name ?? 'Your Brand'}</h1>
-          </div>
-        </div>
-        <Link to="/brand/profile">
-          <Avatar src={profile?.logo_url ?? undefined} name={profile?.company_name ?? 'Brand'} size="md" />
-        </Link>
-      </div>
+          )
+        }
+        greeting="Brand Dashboard"
+        title={profile?.company_name ?? 'Your Brand'}
+      />
 
       <div className="grid grid-cols-2 gap-3 animate-slide-up">
         <StatCard label="Total Campaigns" value={campaignStats.total} icon={<Megaphone className="h-5 w-5" />} />

@@ -45,7 +45,7 @@ export default function PublicCreatorProfile() {
         subtitle="Creator"
         back
       />
-      <CreatorProfileView data={data} />
+      <CreatorProfileView data={data} username={data.profile.username ?? undefined} />
     </div>
   )
 }

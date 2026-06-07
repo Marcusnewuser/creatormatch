@@ -16,7 +16,7 @@ import {
   fetchRecentMessagesForRole,
   fetchRecentActivity,
 } from '../../lib/api'
-import { formatFollowers, formatRelativeTime } from '../../lib/constants'
+import { formatRelativeTime } from '../../lib/constants'
 import type { ConversationWithDetails } from '../../types/database'
 import type { CampaignWithBrand } from '../../types/database'
 import type { CreatorProfile } from '../../types/database'
@@ -172,7 +172,9 @@ export default function CreatorDashboard() {
               <Avatar src={profile?.avatar_url ?? undefined} name={profile?.full_name ?? 'Creator'} size="md" />
               <div>
                 <p className="text-sm font-medium text-text-primary">{profile?.full_name ?? 'Creator'}</p>
-                <p className="text-xs text-text-secondary">{formatFollowers(profile?.follower_count)} followers</p>
+                {profile?.category && (
+                  <p className="text-xs text-text-secondary">{profile.category}</p>
+                )}
               </div>
             </div>
           </Card>

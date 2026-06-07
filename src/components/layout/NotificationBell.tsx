@@ -13,14 +13,14 @@ function formatBadgeCount(count: number): string {
 }
 
 export function NotificationBell() {
-  const { notifications, unreadCount, activeRoleContext, loading, ready, markAsRead, markAllAsRead } =
+  const { notifications, unreadCount, activeAccountType, loading, ready, markAsRead, markAllAsRead } =
     useNotifications()
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
   const recent = notifications.slice(0, 5)
   const centerPath = getNotificationsPath()
-  const modeLabel = activeRoleContext === 'brand' ? 'Brand' : 'Creator'
+  const modeLabel = activeAccountType === 'brand' ? 'Brand' : activeAccountType === 'admin' ? 'Admin' : 'Creator'
 
   useEffect(() => {
     if (!open) return

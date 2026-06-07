@@ -20,7 +20,8 @@ import {
   startCollaboration,
   updateApplicationStatus,
 } from '../../lib/api'
-import { formatDate, formatFollowers } from '../../lib/constants'
+import { formatDate } from '../../lib/constants'
+import { getCreatorSocialLinks } from '../../lib/creator-profile'
 import type { ApplicationWithCreator } from '../../types/database'
 
 export default function ApplicantDetail() {
@@ -106,10 +107,7 @@ export default function ApplicantDetail() {
   if (!application) return <div className="px-4 pt-6 text-text-secondary">Applicant not found.</div>
 
   const creator = application.creator_profiles
-  const socials = [
-    creator?.instagram_url ? { platform: 'Instagram', url: creator.instagram_url } : null,
-    creator?.xiaohongshu_url ? { platform: 'Xiaohongshu', url: creator.xiaohongshu_url } : null,
-  ].filter(Boolean) as { platform: string; url: string }[]
+  const socials = creator ? getCreatorSocialLinks(creator) : []
 
   const statusVariant = applicationStatusBadgeVariant(application.status)
 
@@ -131,10 +129,6 @@ export default function ApplicantDetail() {
           {applicationStatusLabel(application.status)}
         </Badge>
         <div className="flex flex-wrap justify-center gap-6 mt-4 text-sm">
-          <div>
-            <p className="font-semibold text-text-primary">{formatFollowers(creator?.follower_count)}</p>
-            <p className="text-text-secondary">Followers</p>
-          </div>
           {creator?.location && (
             <div>
               <p className="font-semibold text-text-primary flex items-center justify-center gap-1">

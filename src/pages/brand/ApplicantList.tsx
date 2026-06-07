@@ -13,7 +13,6 @@ import {
   fetchCampaignApplications,
   fetchCampaignById,
 } from '../../lib/api'
-import { formatFollowers } from '../../lib/constants'
 import type { ApplicationWithCreator } from '../../types/database'
 import type { CampaignWithBrand } from '../../types/database'
 
@@ -66,7 +65,6 @@ export default function ApplicantList() {
                     </div>
                     <p className="text-sm text-text-secondary mt-0.5">{creator?.category ?? 'Creator'}</p>
                     <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-text-secondary">
-                      <span>{formatFollowers(creator?.follower_count)} followers</span>
                       {creator?.location && (
                         <span className="flex items-center gap-1">
                           <MapPin className="h-3 w-3" />

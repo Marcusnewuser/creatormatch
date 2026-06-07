@@ -6,6 +6,7 @@ import { cn } from '../../lib/utils'
 
 interface CreatorProfileHeaderProps {
   profile: CreatorProfile
+  username?: string
   showLocation?: boolean
   className?: string
   /** Optional actions overlaid on banner (e.g. upload button in edit mode) */
@@ -16,6 +17,7 @@ interface CreatorProfileHeaderProps {
 
 export function CreatorProfileHeader({
   profile,
+  username,
   showLocation = true,
   className,
   bannerAction,
@@ -63,6 +65,9 @@ export function CreatorProfileHeader({
             <h1 className="text-xl sm:text-2xl font-semibold text-text-primary tracking-tight truncate">
               {profile.full_name ?? 'Creator'}
             </h1>
+            {username && (
+              <p className="text-sm text-text-secondary mt-0.5">@{username}</p>
+            )}
             {profile.category && (
               <Badge variant="primary" className="mt-2">
                 {profile.category}

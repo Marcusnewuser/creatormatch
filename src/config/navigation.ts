@@ -10,6 +10,9 @@ import {
   Building2,
   BarChart3,
   MessageCircle,
+  Handshake,
+  LineChart,
+  Search,
 } from 'lucide-react'
 import type { NavItem } from '../components/layout/Sidebar'
 
@@ -33,9 +36,13 @@ export const brandNavItems: NavItem[] = [
 
 export const adminNavItems: NavItem[] = [
   { to: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/admin/users', icon: User, label: 'Users' },
   { to: '/admin/creators', icon: Users, label: 'Creators' },
   { to: '/admin/brands', icon: Building2, label: 'Brands' },
   { to: '/admin/campaigns', icon: Megaphone, label: 'Campaigns' },
   { to: '/admin/applications', icon: FileText, label: 'Applications' },
+  { to: '/admin/collaborations', icon: Handshake, label: 'Collaborations' },
   { to: '/admin/reports', icon: BarChart3, label: 'Reports' },
+  { to: '/admin/analytics', icon: LineChart, label: 'Analytics' },
+  { to: '/admin/search', icon: Search, label: 'Search' },
 ]

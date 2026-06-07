@@ -2,11 +2,13 @@ import { ExternalLink } from 'lucide-react'
 import { CreatorProfileHeader } from './CreatorProfileHeader'
 import { CreatorPostStatsBar } from './CreatorPostStatsBar'
 import { CreatorPostsGrid } from './CreatorPostsGrid'
+import { getCreatorSocialLinks } from '../../lib/creator-profile'
 import type { CreatorProfileWithPosts } from '../../types/database'
 import { cn } from '../../lib/utils'
 
 interface CreatorProfileViewProps {
   data: CreatorProfileWithPosts
+  username?: string
   showLocation?: boolean
   className?: string
   headerAction?: React.ReactNode
@@ -15,23 +17,20 @@ interface CreatorProfileViewProps {
 
 export function CreatorProfileView({
   data,
+  username,
   showLocation = true,
   className,
   headerAction,
   postsHeaderAction,
 }: CreatorProfileViewProps) {
   const { profile, posts, stats } = data
-
-  const socials = [
-    profile.instagram_url ? { platform: 'Instagram', url: profile.instagram_url } : null,
-    profile.xiaohongshu_url ? { platform: 'Xiaohongshu', url: profile.xiaohongshu_url } : null,
-  ].filter(Boolean) as { platform: string; url: string }[]
+  const socials = getCreatorSocialLinks(profile)
 
   return (
     <div className={cn('animate-fade-in', className)}>
       {headerAction && <div className="flex justify-end mb-3">{headerAction}</div>}
 
-      <CreatorProfileHeader profile={profile} showLocation={showLocation} />
+      <CreatorProfileHeader profile={profile} showLocation={showLocation} username={username} />
 
       <CreatorPostStatsBar stats={stats} className="mt-4" />
 

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Bell, TrendingUp, FileText, CheckCircle, ArrowRight, Clock } from 'lucide-react'
+import { TrendingUp, FileText, CheckCircle, ArrowRight, Clock } from 'lucide-react'
 import { Avatar } from '../../components/ui/Avatar'
+import { HomeWelcomeHeader } from '../../components/layout/HomeWelcomeHeader'
 import { StatCard } from '../../components/ui/StatCard'
 import { CampaignCard } from '../../components/CampaignCard'
 import { LoadingState } from '../../components/ui/LoadingState'
@@ -40,18 +41,13 @@ export default function CreatorHome() {
 
   return (
     <div className="px-4 pt-6 animate-fade-in">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
+      <HomeWelcomeHeader
+        avatar={
           <Avatar src={profile?.avatar_url ?? undefined} name={profile?.full_name ?? 'Creator'} size="md" />
-          <div>
-            <p className="text-sm text-text-secondary">Welcome back,</p>
-            <h1 className="text-lg font-semibold text-text-primary">{firstName}</h1>
-          </div>
-        </div>
-        <button className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-white text-text-secondary hover:bg-gray-50 transition-colors">
-          <Bell className="h-5 w-5" />
-        </button>
-      </div>
+        }
+        greeting="Welcome back,"
+        title={firstName}
+      />
 
       <div className="rounded-2xl bg-gradient-to-br from-brand-primary to-brand-secondary p-5 text-white shadow-elevated animate-slide-up">
         <p className="text-sm text-white/80">Your next opportunity awaits</p>

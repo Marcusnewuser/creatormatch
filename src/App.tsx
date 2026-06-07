@@ -8,7 +8,7 @@ import { ProfileLayout } from './layouts/ProfileLayout'
 import { LoadingState } from './components/ui/LoadingState'
 import { SupabaseConfigBanner } from './components/SupabaseConfigBanner'
 import { ProtectedRoute, GuestRoute, OnboardingRoute } from './components/auth/ProtectedRoute'
-import { creatorNavItems, brandNavItems, adminNavItems } from './config/navigation'
+import { creatorNavItems, brandNavItems } from './config/navigation'
 
 const SplashScreen = lazy(() => import('./pages/auth/SplashScreen'))
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'))
@@ -38,7 +38,19 @@ const EditBrandProfile = lazy(() => import('./pages/brand/EditBrandProfile'))
 const BrandDashboard = lazy(() => import('./pages/brand/BrandDashboard'))
 
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
-const AdminPlaceholderPage = lazy(() => import('./pages/admin/AdminPlaceholderPage'))
+const AdminUsersPage = lazy(() => import('./pages/admin/AdminUsersPage'))
+const AdminUserDetailPage = lazy(() => import('./pages/admin/AdminUserDetailPage'))
+const AdminCreatorsPage = lazy(() => import('./pages/admin/AdminCreatorsPage'))
+const AdminBrandsPage = lazy(() => import('./pages/admin/AdminBrandsPage'))
+const AdminCampaignsPage = lazy(() => import('./pages/admin/AdminCampaignsPage'))
+const AdminApplicationsPage = lazy(() => import('./pages/admin/AdminApplicationsPage'))
+const AdminCollaborationsPage = lazy(() => import('./pages/admin/AdminCollaborationsPage'))
+const AdminReportsPage = lazy(() => import('./pages/admin/AdminReportsPage'))
+const AdminAnalyticsPage = lazy(() => import('./pages/admin/AdminAnalyticsPage'))
+const AdminSearchPage = lazy(() => import('./pages/admin/AdminSearchPage'))
+const AdminLayout = lazy(() =>
+  import('./layouts/AdminLayout').then((m) => ({ default: m.AdminLayout })),
+)
 
 const SettingsPage = lazy(() => import('./pages/SettingsPage'))
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'))
@@ -129,14 +141,19 @@ export default function App() {
 
           {/* Admin */}
           <Route element={<ProtectedRoute requireAdmin />}>
-            <Route path="/admin" element={<DashboardLayout navItems={adminNavItems} />}>
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<Navigate to="dashboard" replace />} />
               <Route path="dashboard" element={<AdminDashboard />} />
-              <Route path="creators" element={<AdminPlaceholderPage />} />
-              <Route path="brands" element={<AdminPlaceholderPage />} />
-              <Route path="campaigns" element={<AdminPlaceholderPage />} />
-              <Route path="applications" element={<AdminPlaceholderPage />} />
-              <Route path="reports" element={<AdminPlaceholderPage />} />
-              <Route path="settings" element={<SettingsPage />} />
+              <Route path="users" element={<AdminUsersPage />} />
+              <Route path="users/:userId" element={<AdminUserDetailPage />} />
+              <Route path="creators" element={<AdminCreatorsPage />} />
+              <Route path="brands" element={<AdminBrandsPage />} />
+              <Route path="campaigns" element={<AdminCampaignsPage />} />
+              <Route path="applications" element={<AdminApplicationsPage />} />
+              <Route path="collaborations" element={<AdminCollaborationsPage />} />
+              <Route path="reports" element={<AdminReportsPage />} />
+              <Route path="analytics" element={<AdminAnalyticsPage />} />
+              <Route path="search" element={<AdminSearchPage />} />
             </Route>
           </Route>
 

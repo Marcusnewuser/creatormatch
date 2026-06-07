@@ -56,7 +56,20 @@ export async function hasPortfolioColumns(): Promise<boolean> {
   return portfolioColumnsCache
 }
 
+let creatorSocialColumnsCache: boolean | null = null
+
+/** Migration 019 — username, tiktok_url, youtube_url */
+export async function hasCreatorSocialColumns(): Promise<boolean> {
+  if (!isSupabaseConfigured || !supabase) return false
+  if (creatorSocialColumnsCache !== null) return creatorSocialColumnsCache
+
+  const { error } = await requireSupabase().from('creator_profiles').select('username, tiktok_url').limit(0)
+  creatorSocialColumnsCache = !error
+  return creatorSocialColumnsCache
+}
+
 let collaborationTablesCache: boolean | null = null
+let collaborationCompletionsCache: boolean | null = null
 
 /** Migration 015 — conversations */
 export async function hasCollaborationTables(): Promise<boolean> {
@@ -66,6 +79,16 @@ export async function hasCollaborationTables(): Promise<boolean> {
   const { error } = await requireSupabase().from('conversations').select('id').limit(0)
   collaborationTablesCache = !error
   return collaborationTablesCache
+}
+
+/** Migration 021 — collaboration_completions (permanent completed stats) */
+export async function hasCollaborationCompletionsTable(): Promise<boolean> {
+  if (!isSupabaseConfigured || !supabase) return false
+  if (collaborationCompletionsCache !== null) return collaborationCompletionsCache
+
+  const { error } = await requireSupabase().from('collaboration_completions').select('id').limit(0)
+  collaborationCompletionsCache = !error
+  return collaborationCompletionsCache
 }
 /** Migration 010 — notifications */
 export async function hasNotificationsTable(): Promise<boolean> {
@@ -77,15 +100,30 @@ export async function hasNotificationsTable(): Promise<boolean> {
   return notificationsTableCache
 }
 
-/** Migration 011 — notifications.role_context */
-export async function hasNotificationRoleContext(): Promise<boolean> {
+/** Migration 011 / 020 — notifications.account_type (or legacy role_context) */
+export async function hasNotificationAccountSeparation(): Promise<boolean> {
   if (!isSupabaseConfigured || !supabase) return false
   if (notificationRoleContextCache !== null) return notificationRoleContextCache
 
-  const { error } = await requireSupabase().from('notifications').select('role_context').limit(0)
-  notificationRoleContextCache = !error
+  const { error: accountError } = await requireSupabase()
+    .from('notifications')
+    .select('account_type')
+    .limit(0)
+  if (!accountError) {
+    notificationRoleContextCache = true
+    return true
+  }
+
+  const { error: legacyError } = await requireSupabase()
+    .from('notifications')
+    .select('role_context')
+    .limit(0)
+  notificationRoleContextCache = !legacyError
   return notificationRoleContextCache
 }
+
+/** @deprecated Use hasNotificationAccountSeparation */
+export const hasNotificationRoleContext = hasNotificationAccountSeparation
 
 /** Migration 009 — brand_profiles.banner_url */
 export async function hasBrandBannerColumn(): Promise<boolean> {
@@ -142,6 +180,8 @@ export function resetSchemaCache() {
   notificationsTableCache = null
   notificationRoleContextCache = null
   collaborationTablesCache = null
+  collaborationCompletionsCache = null
+  creatorSocialColumnsCache = null
 }
 
 /** Strip brand banner when migration 009 has not been applied. */

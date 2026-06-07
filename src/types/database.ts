@@ -52,11 +52,12 @@ export interface Submission {
 
 export interface Profile {
   id: string
-  /** Admin flag only; creator/brand access is determined by profile rows. */
+  /** role_type: creator | brand | admin */
   role: UserRole | null
   /** Initial dashboard preference — does not lock account type. */
   primary_mode: AppMode | null
   email: string
+  is_suspended?: boolean
   created_at: string
 }
 
@@ -74,8 +75,11 @@ export interface CreatorProfile {
   average_views: number | null
   average_likes: number | null
   engagement_rate: number | null
+  username: string | null
   instagram_url: string | null
+  tiktok_url: string | null
   xiaohongshu_url: string | null
+  youtube_url: string | null
   category: string | null
   created_at: string
   updated_at: string
@@ -176,7 +180,28 @@ export interface ApplicationWithCreator extends Application {
   creator_profiles: CreatorProfile | null
 }
 
-export type NotificationRoleContext = 'creator' | 'brand'
+/** Permanent completed collaboration record (migration 021). */
+export interface CollaborationCompletion {
+  id: string
+  application_id: string | null
+  campaign_id: string | null
+  creator_id: string
+  brand_id: string
+  campaign_title: string | null
+  completed_at: string
+  created_at: string
+}
+
+/** Workspace account for notification inbox separation (DB: account_type). */
+export type NotificationAccountType = 'creator' | 'brand' | 'admin'
+
+/** @deprecated Use NotificationAccountType */
+export type NotificationRoleContext = NotificationAccountType
+
+export type AdminNotificationType =
+  | 'admin_user_registered'
+  | 'admin_campaign_created'
+  | 'admin_report_submitted'
 
 export type CreatorNotificationType =
   | 'application_submitted'
@@ -185,6 +210,10 @@ export type CreatorNotificationType =
   | 'profile_viewed'
   | 'campaign_recommended'
   | 'collaboration_marked_complete'
+  | 'collaboration_invitation'
+  | 'new_message'
+  | 'submission_approved'
+  | 'file_request'
 
 export type BrandNotificationType =
   | 'application_received'
@@ -192,17 +221,26 @@ export type BrandNotificationType =
   | 'campaign_expiring'
   | 'campaign_closed'
   | 'collaboration_confirmed'
+  | 'collaboration_invitation'
   | 'review_requested'
+  | 'content_submitted'
+  | 'new_message'
+  | 'file_request'
 
-export type NotificationType = CreatorNotificationType | BrandNotificationType
+export type NotificationType =
+  | CreatorNotificationType
+  | BrandNotificationType
+  | AdminNotificationType
 
 export interface Notification {
   id: string
   user_id: string
-  role_context: NotificationRoleContext
+  /** Workspace account — creator and brand inboxes are fully separate. */
+  account_type: NotificationAccountType
   title: string
   message: string
   type: NotificationType
+  /** Read status (DB: is_read). */
   is_read: boolean
   created_at: string
 }
@@ -266,6 +304,11 @@ export interface Database {
       submissions: {
         Row: Submission
         Insert: Omit<Submission, 'id' | 'created_at'>
+        Update: never
+      }
+      collaboration_completions: {
+        Row: CollaborationCompletion
+        Insert: never
         Update: never
       }
     }
